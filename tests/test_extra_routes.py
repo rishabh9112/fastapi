@@ -51,6 +51,11 @@ def trace_item(item_id: str):
     return JSONResponse(None, media_type="message/http")
 
 
+@app.query("/items/{item_id}")
+def query_item(item_id: str, item: Item):
+    return {"item_id": item_id, "item": item, "method": "query"}
+
+
 client = TestClient(app)
 
 
@@ -94,6 +99,16 @@ def test_trace():
     response = client.request("trace", "/items/foo")
     assert response.status_code == 200, response.text
     assert response.headers["content-type"] == "message/http"
+
+
+def test_query():
+    response = client.request("QUERY", "/items/foo", json={"name": "Foo"})
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "item_id": "foo", 
+        "item": {"name": "Foo", "price": None}, 
+        "method": "query"
+    }
 
 
 def test_openapi_schema():
@@ -287,6 +302,42 @@ def test_openapi_schema():
                             "in": "path",
                         }
                     ],
+                },
+                "query": {
+                    "responses": {
+                        "200": {
+                            "description": "Successful Response",
+                            "content": {"application/json": {"schema": {}}},
+                        },
+                        "422": {
+                            "description": "Validation Error",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/HTTPValidationError"
+                                    }
+                                }
+                            },
+                        },
+                    },
+                    "summary": "Query Item",
+                    "operationId": "query_item_items__item_id__query",
+                    "parameters": [
+                        {
+                            "required": True,
+                            "schema": {"title": "Item Id", "type": "string"},
+                            "name": "item_id",
+                            "in": "path",
+                        }
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/Item"}
+                            }
+                        },
+                        "required": True,
+                    },
                 },
             },
             "/items-not-decorated/{item_id}": {
